@@ -225,8 +225,6 @@ class CANopen:
         if ret != 0:
             raise Exception("CANopen Expediated SDO download error ret=%d" % ret)
 
-
-
     # #
     # # SEGMENTED
 
@@ -248,48 +246,54 @@ class CANopen:
 
         return hex_str
 
-       
-    # def SDODownloadSeg(self, node, index, subindex, str_data, size):
-    #     """
-    #     Segmented SDO download
-    #     """
-    #     n = len(str_data)/2
-    #     data = create_string_buffer(''.join([chr(int(str_data[2*n:2*n+2],16)) for n in range(n)]))
 
-    #     ret = canopen_sdo_download_seg(self.sock, c_uint8(node), c_uint16(index), c_uint8(subindex), data, c_uint16(n));
+    def SDODownloadSeg(self, uint8_t node, uint16_t index, uint8_t subindex, str_data, uint16_t size):
+        """
+        Segmented SDO download
+        """
+        cdef uint8_t *data
+        cdef uint16_t n
+        n = len(str_data)/2
+        s = ''.join([chr(int(str_data[2*n:2*n+2],16)) for n in range(n)])
+        ss = PyBytes_Size(s)
+        data = <uint8_t *>PyBytes_AsString(s)
+        ret = canopen_sdo_download_seg(self.sock, node, index, subindex, data,n)
+        if ret != 0:
+            raise Exception("CANopen Segmented SDO download error ret=%d" % ret)
 
-    #     if ret != 0:
-    #         raise Exception("CANopen Segmented SDO download error")
+    def SDOUploadBlock(self, uint8_t node, uint16_t index, uint8_t subindex, uint16_t  size):
+        """
+        Block SDO upload.
+        """
+        cdef uint8_t *ptr
+        ptr = <uint8_t *>malloc(size*cython.sizeof(uint8_t))
+        if ptr is NULL:
+            raise MemoryError()
+        ret = canopen_sdo_upload_block(self.sock, node, index, subindex,  ptr, size);
+        if ret != 0:
+            raise Exception("CANopen Block SDO upload error ret=%d" % ret)
 
-    # #
-    # # BLOCK
-    # #
+        hex_str = ""
+        for i in range(2..size):
+            hex_str += "%.2x" % ord(ptr[i])
+        return hex_str
 
-    # def SDOUploadBlock(self, node, index, subindex, size):
-    #     """
-    #     Block SDO upload.
-    #     """
-    #     data = create_string_buffer(size)
-    #     ret = canopen_sdo_upload_block(self.sock, c_uint8(node), c_uint16(index), c_uint8(subindex), data, c_uint16(size));
+    def SDODownloadBlock(self, uint8_t node, uint16_t index, uint8_t subindex, str_data,  uint16_t  size):
+        """
+        Block SDO download.
+        """
+        cdef uint8_t *data
+        cdef uint16_t n
+        n = len(str_data)/2
+        s = ''.join([chr(int(str_data[2*n:2*n+2],16)) for n in range(n)])
+        ss = PyBytes_Size(s)
+        data = <uint8_t *>PyBytes_AsString(s)
+        # n = len(str_data)/2
+        # data = create_string_buffer(''.join([chr(int(str_data[2*n:2*n+2],16)) for n in range(n)]))
 
-    #     if ret != 0:
-    #         raise Exception("CANopen Block SDO upload error")
+        ret = canopen_sdo_download_block(self.sock, node, index, subindex, data, n+1);
 
-    #     hex_str = "".join(["%.2x" % ord(d) for d in data])[0:-2]
-
-    #     return hex_str
-        
-        
-    # def SDODownloadBlock(self, node, index, subindex, str_data, size):
-    #     """
-    #     Block SDO download.
-    #     """
-    #     n = len(str_data)/2
-    #     data = create_string_buffer(''.join([chr(int(str_data[2*n:2*n+2],16)) for n in range(n)]))
-
-    #     ret = canopen_sdo_download_block(self.sock, c_uint8(node), c_uint16(index), c_uint8(subindex), data, c_uint16(n+1));
-
-    #     if ret != 0:
-    #         raise Exception("CANopen Block SDO download error")
+        if ret != 0:
+            raise Exception("CANopen Block SDO download error ret=%d" % ret)
 
     

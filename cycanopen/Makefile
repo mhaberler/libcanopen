@@ -3,9 +3,7 @@ TARGET := $(DEST)/canopen.so
 
 CFLAGS += -fPIC \
 	$(shell pkg-config python --cflags)	\
-	-I/home/mah/src/can/libcanopen
-
-#	$(shell pkg-config libcanopen --cflags)
+	$(shell pkg-config libcanopen --cflags)
 
 LDFLAGS +=  \
 	$(shell pkg-config python --libs) \
@@ -16,8 +14,12 @@ $(TARGET): canopen.o
 	echo Linking $@
 	$(CC) -g  -shared -o $@ $^ $(LDFLAGS) -lrt
 
-canopen.c: canopen.pyx can.pxd can.pxd can_if.pxd can_raw.pxd canopen.pxd
+canopen.c: canopen.pyx canopen.pxd
 
 canopen.c: canopen.pyx
 	cython -o $@ $<
+
+
+clean:
+	rm -f canopen.c canopen.o canopen.so
 
