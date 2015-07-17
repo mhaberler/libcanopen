@@ -3,12 +3,11 @@ from cpython.bool cimport *
 from os import strerror,getpid
 from cpython.bytes cimport PyBytes_AsString, PyBytes_Size, PyBytes_FromStringAndSize
 from cpython.string cimport PyString_FromStringAndSize
-from libc.string cimport memcpy
+from libc.string cimport memcpy,memset
+from libc.stdlib cimport malloc, free
 cimport posix.unistd# cimport read,write
 from buffer cimport PyBuffer_FillInfo
 
-from .can cimport *
-from .can_if cimport *
 from .canopen cimport *
 
 cdef class mview:
@@ -27,7 +26,8 @@ cdef class CANFrame:
     cdef can_frame f
 
     def __cinit__(self, can_id=0, data=None):
-        self.f.can_id = 0
+        memset(<void *>&self.f, 0, sizeof(can_frame))
+        self.f.can_id = can_id
         self.f.can_dlc = 0
         self.data = data
 
@@ -40,7 +40,7 @@ cdef class CANFrame:
         def __set__(self,uint8_t value):  self.f.can_dlc = value
 
     property data:
-        def __get__(self): return  memoryview(mview(<long>&self.f.data, self.dlen))
+        def __get__(self): return  memoryview(mview(<long>&self.f.data, self.f.can_dlc))
         def __set__(self,s):
             if s:
                 size = PyBytes_Size(s)
@@ -50,26 +50,102 @@ cdef class CANFrame:
                 memcpy(self.f.data, PyBytes_AsString(s), size)
 
     def __str__(self):
-        data_str = " ".join(["%.2x" % (x,) for x in self.f.data])
-        return "CAN Frame: ID=%.2x DLC=%.2x DATA=[%s]" % (self.f.can_id, self.f.can_dlc, data_str)
+        d = ""
+        for i in range(self.f.can_dlc):
+            d += " %.2x" % (self.f.data[i])
+        return "CAN Frame: ID=%.2x DLC=%.2x DATA=[%s]" % (self.f.can_id,
+                                                          self.f.can_dlc, d)
+
+
+cdef class CANopenFrame:
+    cdef canopen_frame_t cf
+
+    def __cinit__(self, rtr=0, function_code=0, type=0, id=0, data=None):
+        self.cf.rtr = rtr
+        self.cf.function_code = function_code
+        self.cf.type = type
+        self.cf.id = id
+        self.cf.data_len = 0
+        self.data = data
+
+    property rtr:
+        def __get__(self): return self.cf.rtr
+        def __set__(self,uint8_t value):  self.cf.rtr = value
+
+    property function_code:
+        def __get__(self): return self.cf.function_code
+        def __set__(self,uint8_t value):  self.cf.function_code = value
+
+    property type:
+        def __get__(self): return self.cf.type
+        def __set__(self,uint8_t value):  self.cf.type = value
+
+    property id:
+        def __get__(self): return self.cf.id
+        def __set__(self,uint32_t value):  self.cf.id = value
+
+    property data:
+        def __get__(self): return  memoryview(mview(<long>self.cf.payload.data, self.cf.can_data_len))
+        def __set__(self,s):
+            if s:
+                size = PyBytes_Size(s)
+                if size > CAN_MAX_DLEN: # FIXME is this right?
+                    raise RuntimeError("data size %d too large" % size)
+                self.cf.data_len = size
+                memcpy(self.cf.payload.data, PyBytes_AsString(s), size)
+
+    def dump(self):
+        canopen_frame_dump_short(&self.cf)
+
+    def send(self, socket):
+        cdef can_frame f
+        if canopen_frame_pack(&self.cf, &f) != 0:
+            raise RuntimeError("pack failed")
+        n = posix.unistd.write(socket, &f, sizeof(can_frame))
+        if n < sizeof(can_frame):
+            raise RuntimeError("write failed rc=%d" % n)
+
+    def __str__(self):
+        d = ""
+        for i in range(self.cf.data_len):
+            d += " %.2x" % (self.cf.payload.data[i])
+        return "CANopen Frame: RTR=%d FC=0x%.2x ID=0x%.2x [len=%d] %s" % (
+            self.cf.rtr,
+            self.cf.function_code,
+            self.cf.id,
+            self.cf.data_len, d)
+
+
+cdef class NMTFrame(CANopenFrame):
+    def __cinit__(self, int node, int cs):
+        if cs == 0:
+            canopen_frame_set_nmt_ng(&self.cf, node)
+        else:
+            canopen_frame_set_nmt_mc(&self.cf, cs, node)
 
 
 class CANopen:
 
-    def __init__(self, interface="can0"):
+    def __init__(self, interface="can0", timeout=0):
         """
         Constructor for CANopen class. Optionally takes an interface 
         name for which to bind a socket to. Defaults to interface "can0"
+        optionally set a read timeout in ms
+        defaults to blocking forever
         """
-        self.sock = can_socket_open(interface)
+        self.sock = can_socket_open(interface, timeout)
 
-    def open(self, interface):
+    def nmt_send(self, int node, int cs):
+        nf = NMTFrame(node, cs)
+        nf.send(self.sock)
+
+    def open(self, interface, timeout=0):
         """
         Open a new socket. If open socket already exist, close it first.
         """
         if self.sock:
             self.close()
-        self.sock = can_socket_open(interface)
+        self.sock = can_socket_open(interface, timeout)
 
     def close(self):
         """
@@ -91,31 +167,33 @@ class CANopen:
         else:
             raise Exception("CAN fram read error: socket not connected")
 
-        
-    # def parse_can_frame(self, can_frame):
-    #     """
-    #     Low level function: Parse a given CAN frame into CANopen frame
-    #     """
-    #     canopen_frame = CANopenFrame()
-    #     if canopen_frame_parse(byref(canopen_frame), byref(can_frame)) == 0:
-    #         return canopen_frame
-    #     else:
-    #         raise Exception("CANopen Frame parse error")
 
-    # def read_frame(self):
-    #     """
-    #     Read a CANopen frame from socket. First read a CAN frame, then parse
-    #     into a CANopen frame and return it.
-    #     """
-    #     can_frame = self.read_can_frame()
-    #     if not can_frame:
-    #         raise Exception("CAN Frame read error")
+    def parse_can_frame(self, CANFrame cf):
+        """
+        Low level function: Parse a given CAN frame into CANopen frame
+        """
+        cof = CANopenFrame()
+        if canopen_frame_parse(&cof.cf, &cf.f) == 0:
 
-    #     canopen_frame = self.parse_can_frame(can_frame)
-    #     if not canopen_frame:
-    #         raise Exception("CANopen Frame parse error")
+            return cof
+        else:
+            raise Exception("CANopen Frame parse error")
 
-    #     return canopen_frame
+
+    def read_frame(self):
+        """
+        Read a CANopen frame from socket. First read a CAN frame, then parse
+        into a CANopen frame and return it.
+        """
+        can_frame = self.read_can_frame()
+        if not can_frame:
+            raise Exception("CAN Frame read error")
+
+        canopen_frame = self.parse_can_frame(can_frame)
+        if not canopen_frame:
+            raise Exception("CANopen Frame parse error")
+
+        return canopen_frame
 
     # #---------------------------------------------------------------------------
     # # SDO related functions
@@ -125,48 +203,50 @@ class CANopen:
     # # EXPEDIATED
     # #
 
-    # def SDOUploadExp(self, node, index, subindex):
-    #     """
-    #     Expediated SDO upload
-    #     """
-    #     res = c_uint32()
-    #     ret = libcanopen.canopen_sdo_upload_exp(self.sock, c_uint8(node), c_uint16(index), c_uint8(subindex), byref(res))
+    def SDOUploadExp(self, uint8_t node, uint16_t index, uint8_t subindex):
+        """
+        Expediated SDO upload
+        """
+        cdef uint32_t res
+        ret = canopen_sdo_upload_exp(self.sock, node, index, subindex, &res)
 
-    #     if ret != 0:
-    #         raise Exception("CANopen Expediated SDO upload error")
+        if ret != 0:
+            raise Exception("CANopen Expediated SDO upload error ret=%d" % ret)
+        return res
 
-    #     return res.value
-        
 
-    # def SDODownloadExp(self, node, index, subindex, data, size):
-    #     """
-    #     Expediated SDO download
-    #     """
+    def SDODownloadExp(self,  uint8_t node, uint16_t index, uint8_t subindex, uint32_t data, uint16_t size):
+        """
+        Expediated SDO download
+        """
 
-    #     ret = canopen_sdo_download_exp(self.sock, c_uint8(node), c_uint16(index), c_uint8(subindex), c_uint32(data), c_uint16(size))
+        ret = canopen_sdo_download_exp(self.sock, node, index, subindex, data, size)
 
-    #     if ret != 0:
-    #         raise Exception("CANopen Expediated SDO download error")
+        if ret != 0:
+            raise Exception("CANopen Expediated SDO download error ret=%d" % ret)
+
 
 
     # #
     # # SEGMENTED
-    # #      
-        
-    # def SDOUploadSeg(self, node, index, subindex, size):
-    #     """
-    #     Segmented SDO upload
-    #     """
-    #     data = create_string_buffer(size)
-    #     ret = canopen_sdo_upload_seg(self.sock, c_uint8(node), c_uint16(index), c_uint8(subindex), data, c_uint16(size));
 
-    #     if ret < 0:
-    #         raise Exception("CANopen Segmented SDO upload error: ret = %d" % ret)
+    def SDOUploadSeg(self, uint8_t node, uint16_t index, uint8_t subindex, uint16_t size):
+        """
+        Segmented SDO upload
+        """
+        cdef uint8_t *ptr
+        ptr = <uint8_t *>malloc(size*cython.sizeof(uint8_t))
+        if ptr is NULL:
+            raise MemoryError()
+        ret = canopen_sdo_upload_seg(self.sock, node, index, subindex, ptr, size)
+        if ret < 0:
+            raise Exception("CANopen Segmented SDO upload error: ret = %d" % ret)
 
-    #     hex_str = "".join(["%.2x" % ord(data[i]) for i in range(ret)])
-    #     #[0:-2]
+        hex_str = "".join(["%.2x" % ord(ptr[i]) for i in range(ret)])
+        free(<void *>ptr)
+        #[0:-2]
 
-    #     return hex_str
+        return hex_str
 
        
     # def SDODownloadSeg(self, node, index, subindex, str_data, size):

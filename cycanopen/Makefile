@@ -3,7 +3,9 @@ TARGET := $(DEST)/canopen.so
 
 CFLAGS += -fPIC \
 	$(shell pkg-config python --cflags)	\
-	$(shell pkg-config libcanopen --cflags)
+	-I/home/mah/src/can/libcanopen
+
+#	$(shell pkg-config libcanopen --cflags)
 
 LDFLAGS +=  \
 	$(shell pkg-config python --libs) \
