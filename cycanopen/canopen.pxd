@@ -1,5 +1,6 @@
 from libc.stdint cimport *
 from .can cimport *
+
 cdef extern from "canopen/canopen.h":
 
     int CANOPEN_FLAG_NORMAL # 0x0
@@ -33,41 +34,40 @@ cdef extern from "canopen/canopen.h":
     # Network ManagemenT Module Control
     #
     int CANOPEN_NMT_MC_CS_START          # 0x01
-#define CANOPEN_NMT_MC_CS_START_STR      "Start remote node"
+    #define CANOPEN_NMT_MC_CS_START_STR      "Start remote node"
     int CANOPEN_NMT_MC_CS_STOP           # 0x02
-#define CANOPEN_NMT_MC_CS_STOP_STR       "Stop remote node"
+    #define CANOPEN_NMT_MC_CS_STOP_STR       "Stop remote node"
     int CANOPEN_NMT_MC_CS_PREOP          # 0x80
-#define CANOPEN_NMT_MC_CS_PREOP_STR      "Enter pre-operation state"
+    #define CANOPEN_NMT_MC_CS_PREOP_STR      "Enter pre-operation state"
     int CANOPEN_NMT_MC_CS_RESET_APP      # 0x81
-#define CANOPEN_NMT_MC_CS_RESET_APP_STR  "Reset application"
+    #define CANOPEN_NMT_MC_CS_RESET_APP_STR  "Reset application"
     int CANOPEN_NMT_MC_CS_RESET_COM      # 0x82
-#define CANOPEN_NMT_MC_CS_RESET_COM_STR  "Reset communication"
+    #define CANOPEN_NMT_MC_CS_RESET_COM_STR  "Reset communication"
 
     ctypedef struct canopen_nmt_mc_t:
         uint8_t cs # command specifier
         uint8_t id
         uint8_t align[6]
 
-#
-# Network ManagemenT Node Guard (and NMT Boot-up as a special case)
-#
-# XXX: use a table instead?
+    #
+    # Network ManagemenT Node Guard (and NMT Boot-up as a special case)
+    #
+    # XXX: use a table instead?
     int CANOPEN_NMT_NG_STATE_MASK            # 0x7F
     int CANOPEN_NMT_NG_STATE_BOOTUP          # 0x00
-#define CANOPEN_NMT_NG_STATE_BOOTUP_STR      "Boot-up"
+    #define CANOPEN_NMT_NG_STATE_BOOTUP_STR      "Boot-up"
     int CANOPEN_NMT_NG_STATE_DISCON          # 0x01
-#define CANOPEN_NMT_NG_STATE_DISCON_STR      "Disconnected"
+    #define CANOPEN_NMT_NG_STATE_DISCON_STR      "Disconnected"
     int CANOPEN_NMT_NG_STATE_CON             # 0x02
-#define CANOPEN_NMT_NG_STATE_CON_STR         "Connecting"
+    #define CANOPEN_NMT_NG_STATE_CON_STR         "Connecting"
     int CANOPEN_NMT_NG_STATE_PREP            # 0x03
-#define CANOPEN_NMT_NG_STATE_PREP_STR        "Preparing"
+    #define CANOPEN_NMT_NG_STATE_PREP_STR        "Preparing"
     int CANOPEN_NMT_NG_STATE_STOP            # 0x04
-#define CANOPEN_NMT_NG_STATE_STOP_STR        "Stopped"
+    #define CANOPEN_NMT_NG_STATE_STOP_STR        "Stopped"
     int CANOPEN_NMT_NG_STATE_OP              # 0x05
-#define CANOPEN_NMT_NG_STATE_OP_STR          "Operational"
+    #define CANOPEN_NMT_NG_STATE_OP_STR          "Operational"
     int CANOPEN_NMT_NG_STATE_PREOP           # 0x7F
-#define CANOPEN_NMT_NG_STATE_PREOP_STR       "Pre-operational"
-
+    #define CANOPEN_NMT_NG_STATE_PREOP_STR       "Pre-operational"
 
     ctypedef struct  canopen_nmt_ng_t:
         uint8_t state
@@ -80,28 +80,28 @@ cdef extern from "canopen/canopen.h":
     int CANOPEN_SDO_CS_MASK     # 0xE0
     int CANOPEN_SDO_CS_RX_IDD   # 0x20
     int CANOPEN_SDO_CS_TX_IDD   # 0x60
-#define CANOPEN_SDO_CS_IDD_STR  "Initiate Domain Download"
+    #define CANOPEN_SDO_CS_IDD_STR  "Initiate Domain Download"
     int CANOPEN_SDO_CS_RX_DDS   # 0x00
     int CANOPEN_SDO_CS_TX_DDS   # 0x20
-#define CANOPEN_SDO_CS_DDS_STR  "Download Domain Segment"
+    #define CANOPEN_SDO_CS_DDS_STR  "Download Domain Segment"
     int CANOPEN_SDO_CS_RX_IDU   # 0x40
     int CANOPEN_SDO_CS_TX_IDU   # 0x40
-#define CANOPEN_SDO_CS_IDU_STR  "Initiate Domain Upload"
+    #define CANOPEN_SDO_CS_IDU_STR  "Initiate Domain Upload"
     int CANOPEN_SDO_CS_RX_UDS   # 0x60
     int CANOPEN_SDO_CS_TX_UDS   # 0x00
-#define CANOPEN_SDO_CS_UDS_STR  "Upload Domain Segment"
+    #define CANOPEN_SDO_CS_UDS_STR  "Upload Domain Segment"
     int CANOPEN_SDO_CS_RX_ADT   # 0x80
     int CANOPEN_SDO_CS_TX_ADT   # 0x80
-#define CANOPEN_SDO_CS_ADT_STR  "Abort Domain Transfer"
+    #define CANOPEN_SDO_CS_ADT_STR  "Abort Domain Transfer"
     int CANOPEN_SDO_CS_RX_BD    # 0xC0
     int CANOPEN_SDO_CS_TX_BD    # 0xA0
-#define CANOPEN_SDO_CS_BD_STR  "Block Download"
+    #define CANOPEN_SDO_CS_BD_STR  "Block Download"
 
-##define CANOPEN_SDO_CS_RX_IBD_   # 0xC0
+    int CANOPEN_SDO_CS_RX_IBD_   # 0xC0
 
 
     # initiate download flags
-    int CANOPEN_SDO_CS_ID_N_MASK    # 0x0C    
+    int CANOPEN_SDO_CS_ID_N_MASK    # 0x0C
     int CANOPEN_SDO_CS_ID_N_SHIFT   # 0x02
     int CANOPEN_SDO_CS_ID_E_FLAG    # 0x02
     int CANOPEN_SDO_CS_ID_S_FLAG    # 0x01
@@ -182,8 +182,8 @@ cdef extern from "canopen/canopen.h":
 
 
     # protocol parsing and packing
-    int canopen_frame_parse(canopen_frame_t *canopen_frame, can_frame *can_frame)
-    int canopen_frame_pack(canopen_frame_t *canopen_frame, can_frame *can_frame)
+    int canopen_frame_parse(canopen_frame_t *canopen_frame, can_frame *cf)
+    int canopen_frame_pack(canopen_frame_t *canopen_frame, can_frame *cf)
 
     # debug print-out to the standard output
     int canopen_frame_dump_short(canopen_frame_t *frame)
