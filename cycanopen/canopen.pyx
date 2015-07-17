@@ -8,13 +8,8 @@ cimport posix.unistd# cimport read,write
 from buffer cimport PyBuffer_FillInfo
 
 from .can cimport *
-#from .can_if cimport *
-#from .canopen cimport *
-
-    # ctypedef struct X_frame:
-    #     canid_t can_id  # 32 bit CAN_ID + EFF/RTR/ERR flags */
-    #     uint8_t can_dlc # frame payload length in byte (0 .. CAN_MAX_DLEN) */
-    #     uint8_t *data   #[CAN_MAX_DLEN] __attribute__((aligned(8)))
+from .can_if cimport *
+from .canopen cimport *
 
 cdef class mview:
     cdef void *base
@@ -29,7 +24,6 @@ cdef class mview:
         view.obj = self
 
 cdef class CANFrame:
-    cdef canopen_nmt_ng_t x
     cdef can_frame f
 
     def __cinit__(self, can_id=0, data=None):
@@ -59,19 +53,6 @@ cdef class CANFrame:
         data_str = " ".join(["%.2x" % (x,) for x in self.f.data])
         return "CAN Frame: ID=%.2x DLC=%.2x DATA=[%s]" % (self.f.can_id, self.f.can_dlc, data_str)
 
-# class CANopenFrame(Structure):
-#     _fields_ = [("rtr",           c_uint8),
-#                 ("function_code", c_uint8),
-#                 ("type",          c_uint8),
-#                 ("id",            c_uint32),
-#                 ("data",          c_uint8 * 8), # should be a union...
-#                 ("data_len",      c_uint8)]
-
-#     def __str__(self):
-#         data_str = " ".join(["%.2x" % (x,) for x in self.data])    
-#         return "CANopen Frame: RTR=%d FC=0x%.2x ID=0x%.2x [len=%d] %s" % (self.rtr, self.function_code, self.id, self.data_len, data_str)
-
-
 
 class CANopen:
 
@@ -80,7 +61,7 @@ class CANopen:
         Constructor for CANopen class. Optionally takes an interface 
         name for which to bind a socket to. Defaults to interface "can0"
         """
-        pass #self.sock = can_socket_open(interface)
+        self.sock = can_socket_open(interface)
 
     def open(self, interface):
         """
@@ -88,14 +69,14 @@ class CANopen:
         """
         if self.sock:
             self.close()
-        pass #self.sock = can_socket_open(interface)
+        self.sock = can_socket_open(interface)
 
     def close(self):
         """
         Close the socket associated with this class instance.
         """
         if self.sock:
-            pass #can_socket_close(self.sock)
+            can_socket_close(self.sock)
             self.sock = None
 
     def read_can_frame(self):

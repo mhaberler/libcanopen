@@ -50,7 +50,7 @@ cdef extern from "linux/can.h":
     #            mapping of the 'data length code' to the real payload length
     #  @data:    CAN frame payload (up to 8 byte)
 
-    ctypedef struct can_frame:
+    cdef struct can_frame:
         uint32_t can_id  # 32 bit CAN_ID + EFF/RTR/ERR flags */
         uint8_t can_dlc # frame payload length in byte (0 .. CAN_MAX_DLEN) */
         uint8_t *data   #[CAN_MAX_DLEN] __attribute__((aligned(8)))
@@ -83,7 +83,7 @@ cdef extern from "linux/can.h":
     #  @__res1: reserved / padding
     #  @data:   CAN FD frame payload (up to CANFD_MAX_DLEN byte)
 
-    ctypedef struct canfd_frame:
+    cdef struct canfd_frame:
         uint32_t can_id  # 32 bit CAN_ID + EFF/RTR/ERR flags */
         uint8_t    len     # frame payload length in byte */
         uint8_t    flags   # additional flags for CAN FD */
@@ -134,7 +134,7 @@ cdef extern from "linux/can.h":
     #  The filter can be inverted (CAN_INV_FILTER bit set in can_id) or it can
     #  filter for error message frames (CAN_ERR_FLAG bit set in mask).
     # 
-    ctypedef struct can_filter:
+    cdef struct can_filter:
         uint32_t can_id
         uint32_t can_mask
 
