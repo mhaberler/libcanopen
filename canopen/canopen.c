@@ -648,7 +648,7 @@ canopen_frame_dump_verbose(canopen_frame_t *frame)
     }
 
     printf("============================================\n");
-    printf("Recieved CANopen frame:\n");
+    printf("CANopen frame:\n");
 
     if (frame->type == CANOPEN_FLAG_EXTENDED) // XXX flag!?!
     {
