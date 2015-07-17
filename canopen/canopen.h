@@ -181,7 +181,16 @@ typedef struct _canopen_sdo {
 //ST .. c:member:: uint8_t canopen_frame_t.function_code
 //ST 
 //ST     The CANopen function code part of the COB-ID in the CAN frame.    
-//ST 
+//ST
+
+
+typedef union  _payload {
+    canopen_nmt_mc_t    nmt_mc;
+    canopen_nmt_ng_t    nmt_ng;
+    canopen_sdo_t       sdo;
+    uint8_t             data[8]; // raw data access
+} payload_t;
+
 typedef struct _canopen_frame {
 
     // basic
@@ -190,13 +199,7 @@ typedef struct _canopen_frame {
     uint8_t  type;          // CANOPEN_FLAG_STANDARD or CANOPEN_FLAG_EXTENDED 
     uint32_t id;            // the 7 (STANDARD) or 29? (EXTENDED) bit ID field,
                             // not including the function code. 
-    union {
-        canopen_nmt_mc_t    nmt_mc;
-        canopen_nmt_ng_t    nmt_ng;
-        canopen_sdo_t       sdo;    
-        uint8_t             data[8]; // raw data access
-    } payload;
-
+    payload_t payload;
     uint8_t  data_len;
 
 } canopen_frame_t;
