@@ -132,6 +132,9 @@ main(int argc, char **argv)
         return 1;
     }
 
+    canopen_frame_dump_short(&canopen_frame);
+    //canopen_frame_dump_verbose(&canopen_frame);
+
     // send the frame to the CAN bus
     bytes_sent = write(sock, &can_frame, sizeof(can_frame));
 
