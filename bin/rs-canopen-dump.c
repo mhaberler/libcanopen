@@ -47,7 +47,7 @@ main(int argc, char **argv)
     }
 
     /* Create the socket */
-    if ((sock = can_socket_open(argv[1])) < 0)
+    if ((sock = can_socket_open(argv[1], 0)) < 0)
     {
         fprintf(stderr, "Error: Failed to create socket.\n");
         return -1;
