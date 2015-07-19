@@ -85,7 +85,7 @@ cdef class CANopenFrame:
         def __set__(self,uint32_t value):  self.cf.id = value
 
     property data:
-        def __get__(self): return  memoryview(mview(<long>self.cf.payload.data, self.cf.can_data_len))
+        def __get__(self): return  memoryview(mview(<long>self.cf.payload.data, self.cf.data_len))
         def __set__(self,s):
             if s:
                 size = PyBytes_Size(s)
